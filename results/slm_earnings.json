@@ -1,0 +1,47 @@
+{
+  "random": {
+    "mean_reward": -0.5037546653270523,
+    "std_reward": 1.1365852791816307,
+    "accuracy": 0.37666666666666665,
+    "avg_conf_correct": 0.47345132446658295,
+    "avg_conf_wrong": 0.49893047680510555,
+    "predictions": {
+      "down": 109,
+      "flat": 90,
+      "up": 101
+    }
+  },
+  "always_up": {
+    "mean_reward": -0.16017866666666664,
+    "std_reward": 0.9789091519023725,
+    "accuracy": 0.45666666666666667,
+    "avg_conf_correct": 0.5,
+    "avg_conf_wrong": 0.5,
+    "predictions": {
+      "down": 0,
+      "flat": 0,
+      "up": 300
+    }
+  },
+  "slm_ppo": {
+    "mean_reward": 0.6190859967098236,
+    "std_reward": 0.8861417736112063,
+    "accuracy": 0.82,
+    "avg_conf_correct": 0.8999999761581421,
+    "avg_conf_wrong": 0.8999999761581421,
+    "predictions": {
+      "down": 148,
+      "flat": 0,
+      "up": 152
+    }
+  },
+  "config": {
+    "env_type": "earnings",
+    "n_records": 300,
+    "timesteps": 30000,
+    "eval_episodes": 300,
+    "model_name": "all-MiniLM-L6-v2",
+    "embed_dim": 384,
+    "train_time_seconds": 571.3
+  }
+}

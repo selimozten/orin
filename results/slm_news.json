@@ -1,0 +1,47 @@
+{
+  "random": {
+    "mean_reward": -0.5199176654298703,
+    "std_reward": 1.075271270349432,
+    "accuracy": 0.3566666666666667,
+    "avg_conf_correct": 0.4738317722472075,
+    "avg_conf_wrong": 0.49792745697838037,
+    "predictions": {
+      "down": 109,
+      "flat": 90,
+      "up": 101
+    }
+  },
+  "always_up": {
+    "mean_reward": -0.09462699999999998,
+    "std_reward": 0.9430636860631417,
+    "accuracy": 0.49,
+    "avg_conf_correct": 0.5,
+    "avg_conf_wrong": 0.5,
+    "predictions": {
+      "down": 0,
+      "flat": 0,
+      "up": 300
+    }
+  },
+  "slm_ppo": {
+    "mean_reward": 0.529546997624755,
+    "std_reward": 0.88987515145094,
+    "accuracy": 0.7966666666666666,
+    "avg_conf_correct": 0.856485333839221,
+    "avg_conf_wrong": 0.8901639111706467,
+    "predictions": {
+      "down": 139,
+      "flat": 0,
+      "up": 161
+    }
+  },
+  "config": {
+    "env_type": "news",
+    "n_records": 300,
+    "timesteps": 30000,
+    "eval_episodes": 300,
+    "model_name": "all-MiniLM-L6-v2",
+    "embed_dim": 384,
+    "train_time_seconds": 493.4
+  }
+}
