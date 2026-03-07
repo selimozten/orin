@@ -124,7 +124,7 @@ class FinTextEnv(gym.Env):
             raise RuntimeError("Call reset() before step().")
 
         direction = int(action["direction"])
-        confidence = float(action.get("confidence", 0.5))
+        confidence = float(np.clip(action.get("confidence", 0.5), 0.0, 1.0))
 
         outcome = self._current_record.get("outcome", {})
         actual_return = self._get_actual_return(outcome)
