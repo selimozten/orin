@@ -9,6 +9,7 @@ import numpy as np
 from gymnasium import spaces
 
 from orin.rewards.composite import CompositeReward
+from orin.rewards.protocol import RewardFn
 
 
 class FinTextEnv(gym.Env):
@@ -31,7 +32,7 @@ class FinTextEnv(gym.Env):
     def __init__(
         self,
         data: list[dict[str, Any]] | None = None,
-        reward_fn: CompositeReward | None = None,
+        reward_fn: RewardFn | None = None,
         max_text_length: int = 4096,
         render_mode: str | None = None,
         shuffle: bool = True,
