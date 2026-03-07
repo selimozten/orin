@@ -75,6 +75,13 @@ class FinTextEnv(gym.Env):
         self._episode_count: int = 0
         self._cumulative_reward: float = 0.0
 
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}("
+            f"records={len(self.data)}, "
+            f"episodes={self._episode_count})"
+        )
+
     def _load_data(self) -> list[dict[str, Any]]:
         """Override in subclasses to load environment-specific data."""
         return self.data
