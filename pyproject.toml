@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orin"
+version = "0.1.0"
+description = "RL gym for training LLMs on financial text reasoning"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Selim Ozten" }]
+requires-python = ">=3.10"
+dependencies = [
+    "gymnasium>=0.29.0",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+]
+
+[project.optional-dependencies]
+all = [
+    "yfinance>=0.2.0",
+    "pufferlib>=0.7.0",
+    "datasets>=2.14.0",
+]
+dev = [
+    "pytest>=7.0",
+    "ruff>=0.1.0",
+]
+
+[project.entry-points."gymnasium.envs.__root__"]
+orin = "orin.envs:register_envs"
+
+[tool.setuptools.packages.find]
+include = ["orin*"]
+
+[tool.ruff]
+line-length = 99
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
