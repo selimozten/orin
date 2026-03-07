@@ -37,10 +37,9 @@ def load_sample_data(env_type: str) -> list[dict[str, Any]]:
     data_dir = Path(__file__).parent.parent.parent / "data" / "sample"
     path = data_dir / f"{env_type}.jsonl"
     if not path.exists():
-        raise FileNotFoundError(
-            f"Sample data not found at {path}. "
-            f"Run `python -m orin.data.sources` to generate sample data."
-        )
+        from orin.data.sources import write_sample_data
+
+        write_sample_data(data_dir)
     return load_jsonl(path)
 
 
