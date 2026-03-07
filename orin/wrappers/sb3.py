@@ -40,7 +40,10 @@ class SB3Wrapper(gym.Wrapper):
         self.confidence_bins = confidence_bins
 
         self.observation_space = spaces.Box(
-            low=0.0, high=1.0, shape=(obs_size,), dtype=np.float32,
+            low=0.0,
+            high=1.0,
+            shape=(obs_size,),
+            dtype=np.float32,
         )
 
         # 3 directions * confidence_bins = total discrete actions
@@ -89,13 +92,17 @@ class SB3Wrapper(gym.Wrapper):
         }
 
     def reset(
-        self, *, seed: int | None = None, options: dict[str, Any] | None = None,
+        self,
+        *,
+        seed: int | None = None,
+        options: dict[str, Any] | None = None,
     ) -> tuple[np.ndarray, dict[str, Any]]:
         obs, info = self.env.reset(seed=seed, options=options)
         return self._encode_obs(obs["text"]), info
 
     def step(
-        self, action: int | np.integer,
+        self,
+        action: int | np.integer,
     ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
         dict_action = self._decode_action(int(action))
         obs, reward, terminated, truncated, info = self.env.step(dict_action)
@@ -122,8 +129,7 @@ def make_sb3_env(
         Wrapped environment ready for SB3 training.
     """
     env = gym.make(env_id, **kwargs)
-    return SB3Wrapper(env, obs_size=obs_size, obs_mode=obs_mode,
-                      confidence_bins=confidence_bins)
+    return SB3Wrapper(env, obs_size=obs_size, obs_mode=obs_mode, confidence_bins=confidence_bins)
 
 
 def make_sb3_vec_env(
@@ -157,6 +163,7 @@ def make_sb3_vec_env(
     def _make() -> Callable[[], SB3Wrapper]:
         def _init() -> SB3Wrapper:
             return make_sb3_env(env_id, obs_size, obs_mode, confidence_bins, **kwargs)
+
         return _init
 
     return DummyVecEnv([_make() for _ in range(n_envs)])

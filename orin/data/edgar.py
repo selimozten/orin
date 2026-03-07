@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import json
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 from typing import Any
 
 _USER_AGENT = "orin-fintext-gym/0.1 (https://github.com/selimozten/orin)"
@@ -100,17 +100,17 @@ def get_recent_filings(
     for i in range(len(forms)):
         if forms[i] in form_types:
             accession_clean = accessions[i].replace("-", "")
-            filing_url = (
-                f"{_FILING_BASE}/{cik.lstrip('0')}/{accession_clean}/{primary_docs[i]}"
+            filing_url = f"{_FILING_BASE}/{cik.lstrip('0')}/{accession_clean}/{primary_docs[i]}"
+            filings.append(
+                {
+                    "accession": accessions[i],
+                    "form": forms[i],
+                    "date": dates[i],
+                    "description": descriptions[i] if i < len(descriptions) else "",
+                    "url": filing_url,
+                    "ticker": ticker.upper(),
+                }
             )
-            filings.append({
-                "accession": accessions[i],
-                "form": forms[i],
-                "date": dates[i],
-                "description": descriptions[i] if i < len(descriptions) else "",
-                "url": filing_url,
-                "ticker": ticker.upper(),
-            })
             if len(filings) >= max_results:
                 break
 
@@ -177,11 +177,13 @@ def fetch_filings_as_records(
         text = fetch_filing_text(filing, max_chars)
         if not text:
             continue
-        records.append({
-            "text": text,
-            "ticker": filing["ticker"],
-            "date": filing["date"],
-            "source": filing["form"],
-            "outcome": {"direction": "flat", "magnitude": 0.0, "timeframe": timeframe},
-        })
+        records.append(
+            {
+                "text": text,
+                "ticker": filing["ticker"],
+                "date": filing["date"],
+                "source": filing["form"],
+                "outcome": {"direction": "flat", "magnitude": 0.0, "timeframe": timeframe},
+            }
+        )
     return records

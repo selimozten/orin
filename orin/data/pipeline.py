@@ -36,7 +36,10 @@ def build_filing_dataset(
     all_records: list[dict[str, Any]] = []
     for ticker in tickers:
         records = fetch_filings_as_records(
-            ticker, form_types, max_per_ticker, timeframe=timeframe,
+            ticker,
+            form_types,
+            max_per_ticker,
+            timeframe=timeframe,
         )
         all_records.extend(records)
 

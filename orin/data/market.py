@@ -42,8 +42,9 @@ def get_returns(
     start = dt - timedelta(days=5)
     end = dt + timedelta(days=max_days + 10)
 
-    data = yf.download(ticker, start=start.strftime("%Y-%m-%d"), end=end.strftime("%Y-%m-%d"),
-                       progress=False)
+    data = yf.download(
+        ticker, start=start.strftime("%Y-%m-%d"), end=end.strftime("%Y-%m-%d"), progress=False
+    )
 
     if data.empty:
         return {tf: 0.0 for tf in timeframes}

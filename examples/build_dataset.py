@@ -54,7 +54,7 @@ def main() -> None:
     # Show a sample
     if records:
         r = records[0]
-        print(f"\nSample record:")
+        print("\nSample record:")
         print(f"  Ticker: {r['ticker']}")
         print(f"  Date:   {r['date']}")
         print(f"  Source: {r['source']}")

@@ -92,9 +92,7 @@ def run_evaluation(
         "avg_confidence_wrong": (
             float(np.mean(confidence_when_wrong)) if confidence_when_wrong else 0.0
         ),
-        "prediction_distribution": {
-            k: len(v) for k, v in returns_by_prediction.items()
-        },
+        "prediction_distribution": {k: len(v) for k, v in returns_by_prediction.items()},
     }
     return metrics
 
@@ -111,7 +109,8 @@ def print_metrics(metrics: dict) -> None:
     print(f"  Conf (correct):    {metrics['avg_confidence_correct']:.2f}")
     print(f"  Conf (wrong):      {metrics['avg_confidence_wrong']:.2f}")
     dist = metrics["prediction_distribution"]
-    print(f"  Predictions:       up={dist.get('up', 0)} down={dist.get('down', 0)} flat={dist.get('flat', 0)}")
+    up, down, flat = dist.get("up", 0), dist.get("down", 0), dist.get("flat", 0)
+    print(f"  Predictions:       up={up} down={down} flat={flat}")
     print()
 
 
@@ -145,7 +144,11 @@ def main() -> None:
 
             model = PPO.load(args.model)
             metrics = run_evaluation(
-                args.env, model.predict, args.episodes, args.obs_size, f"PPO ({args.model})",
+                args.env,
+                model.predict,
+                args.episodes,
+                args.obs_size,
+                f"PPO ({args.model})",
             )
             print_metrics(metrics)
             all_results.append(metrics)

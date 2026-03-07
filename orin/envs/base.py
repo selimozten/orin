@@ -77,9 +77,7 @@ class FinTextEnv(gym.Env):
 
     def __repr__(self) -> str:
         return (
-            f"{self.__class__.__name__}("
-            f"records={len(self.data)}, "
-            f"episodes={self._episode_count})"
+            f"{self.__class__.__name__}(records={len(self.data)}, episodes={self._episode_count})"
         )
 
     def _load_data(self) -> list[dict[str, Any]]:

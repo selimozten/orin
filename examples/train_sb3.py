@@ -97,13 +97,15 @@ def main() -> None:
     eval_env = make_sb3_env(args.env, obs_size=args.obs_size)
     print("\n--- Trained Agent ---")
     trained_metrics = evaluate(eval_env, model.predict, n_episodes=args.eval_episodes)
-    print(f"Mean reward: {trained_metrics['mean_reward']:.3f} +/- {trained_metrics['std_reward']:.3f}")
-    print(f"Accuracy:    {trained_metrics['accuracy']:.1%}")
+    m = trained_metrics
+    print(f"Mean reward: {m['mean_reward']:.3f} +/- {m['std_reward']:.3f}")
+    print(f"Accuracy:    {m['accuracy']:.1%}")
 
     # Random baseline
     print("\n--- Random Baseline ---")
     random_metrics = evaluate(eval_env, random_policy, n_episodes=args.eval_episodes)
-    print(f"Mean reward: {random_metrics['mean_reward']:.3f} +/- {random_metrics['std_reward']:.3f}")
+    m = random_metrics
+    print(f"Mean reward: {m['mean_reward']:.3f} +/- {m['std_reward']:.3f}")
     print(f"Accuracy:    {random_metrics['accuracy']:.1%}")
 
     delta = trained_metrics["mean_reward"] - random_metrics["mean_reward"]
