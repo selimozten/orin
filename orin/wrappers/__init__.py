@@ -9,3 +9,6 @@ __all__ = [
     "SB3Wrapper",
     "make_sb3_env",
 ]
+
+# SLMWrapper is lazily importable (requires sentence-transformers)
+# from orin.wrappers.slm import SLMWrapper, make_slm_env
