@@ -1,0 +1,50 @@
+{
+  "random": {
+    "mean_reward": -0.6033824995261431,
+    "std_reward": 1.101180840570919,
+    "accuracy": 0.34,
+    "predictions": {
+      "down": 71,
+      "flat": 73,
+      "up": 56
+    }
+  },
+  "always_up": {
+    "mean_reward": -0.07877999999999999,
+    "std_reward": 0.9420431989033198,
+    "accuracy": 0.5,
+    "predictions": {
+      "down": 0,
+      "flat": 0,
+      "up": 200
+    }
+  },
+  "always_down": {
+    "mean_reward": -0.07121999999999996,
+    "std_reward": 0.9420431989033199,
+    "accuracy": 0.5,
+    "predictions": {
+      "down": 200,
+      "flat": 0,
+      "up": 0
+    }
+  },
+  "ppo_trained": {
+    "mean_reward": 0.9870099928474425,
+    "std_reward": 0.008765665975840059,
+    "accuracy": 1.0,
+    "predictions": {
+      "down": 100,
+      "flat": 0,
+      "up": 100
+    }
+  },
+  "config": {
+    "env": "orin/FinText-News-v0",
+    "timesteps": 20000,
+    "obs_size": 256,
+    "eval_episodes": 200,
+    "train_time_seconds": 7.6,
+    "training_episodes": 20096
+  }
+}

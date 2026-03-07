@@ -1,0 +1,50 @@
+{
+  "random": {
+    "mean_reward": -0.6640939990701675,
+    "std_reward": 1.0061607706125928,
+    "accuracy": 0.29,
+    "predictions": {
+      "down": 71,
+      "flat": 73,
+      "up": 56
+    }
+  },
+  "always_up": {
+    "mean_reward": -0.025314999999999976,
+    "std_reward": 0.9102716399377714,
+    "accuracy": 0.475,
+    "predictions": {
+      "down": 0,
+      "flat": 0,
+      "up": 200
+    }
+  },
+  "always_down": {
+    "mean_reward": -0.1281655,
+    "std_reward": 0.9342529843461834,
+    "accuracy": 0.47,
+    "predictions": {
+      "down": 200,
+      "flat": 0,
+      "up": 0
+    }
+  },
+  "ppo_trained": {
+    "mean_reward": 0.9592704932542443,
+    "std_reward": 0.08349295612707727,
+    "accuracy": 0.935,
+    "predictions": {
+      "down": 95,
+      "flat": 0,
+      "up": 105
+    }
+  },
+  "config": {
+    "env": "orin/FinText-Macro-v0",
+    "timesteps": 20000,
+    "obs_size": 256,
+    "eval_episodes": 200,
+    "train_time_seconds": 8.0,
+    "training_episodes": 20096
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "random": {
+    "mean_reward": -0.6739269989897012,
+    "std_reward": 1.0921503114044497,
+    "accuracy": 0.31,
+    "predictions": {
+      "down": 71,
+      "flat": 73,
+      "up": 56
+    }
+  },
+  "always_up": {
+    "mean_reward": -0.02702499999999997,
+    "std_reward": 0.9708132433042926,
+    "accuracy": 0.53,
+    "predictions": {
+      "down": 0,
+      "flat": 0,
+      "up": 200
+    }
+  },
+  "always_down": {
+    "mean_reward": -0.16081850000000003,
+    "std_reward": 0.9675022185027536,
+    "accuracy": 0.45,
+    "predictions": {
+      "down": 200,
+      "flat": 0,
+      "up": 0
+    }
+  },
+  "ppo_trained": {
+    "mean_reward": 1.0154124928474426,
+    "std_reward": 0.03460889038599765,
+    "accuracy": 1.0,
+    "predictions": {
+      "down": 91,
+      "flat": 0,
+      "up": 109
+    }
+  },
+  "config": {
+    "env": "orin/FinText-Earnings-v0",
+    "timesteps": 20000,
+    "obs_size": 256,
+    "eval_episodes": 200,
+    "train_time_seconds": 7.6,
+    "training_episodes": 20096
+  }
+}
