@@ -72,6 +72,8 @@ class FinTextEnv(gym.Env):
         self._current_record: dict[str, Any] | None = None
         self._indices: list[int] = []
         self._step_count: int = 0
+        self._episode_count: int = 0
+        self._cumulative_reward: float = 0.0
 
     def _load_data(self) -> list[dict[str, Any]]:
         """Override in subclasses to load environment-specific data."""
@@ -124,6 +126,8 @@ class FinTextEnv(gym.Env):
 
         self._step_count += 1
         self._current_idx += 1
+        self._episode_count += 1
+        self._cumulative_reward += reward
         terminated = True  # one prediction per document
         truncated = False
 
@@ -131,6 +135,8 @@ class FinTextEnv(gym.Env):
         info["actual_return"] = actual_return
         info["predicted_direction"] = direction
         info["confidence"] = confidence
+        info["episode_count"] = self._episode_count
+        info["cumulative_reward"] = self._cumulative_reward
 
         if self.render_mode == "human":
             self.render()
