@@ -21,6 +21,10 @@ all = [
     "yfinance>=0.2.0",
     "pufferlib>=0.7.0",
     "datasets>=2.14.0",
+    "stable-baselines3>=2.0.0",
+]
+rl = [
+    "stable-baselines3>=2.0.0",
 ]
 dev = [
     "pytest>=7.0",
