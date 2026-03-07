@@ -21,4 +21,4 @@ def register_envs() -> None:
         "orin/FinText-Macro-v0": "orin.envs.macro:FinTextMacro",
     }
     for env_id, entry_point in _envs.items():
-        gym.register(id=env_id, entry_point=entry_point)
+        gym.register(id=env_id, entry_point=entry_point, disable_env_checker=True)
