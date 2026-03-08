@@ -14,9 +14,16 @@ class CalibrationReward:
     High confidence + correct = high reward.
     High confidence + wrong = high penalty.
     Encourages the agent to be confident only when it should be.
+
+    Modes:
+        brier: ``1 - (confidence - correct)^2`` -- proper scoring rule that
+            naturally penalizes overconfidence without a tuneable scale.
+        linear: legacy behaviour -- returns ``confidence`` when correct,
+            ``-confidence * penalty_scale`` when wrong.
     """
 
     penalty_scale: float = 2.0
+    mode: str = "brier"
 
     def compute(
         self,
@@ -48,6 +55,11 @@ class CalibrationReward:
             )
             correct = predicted_direction == actual_dir
 
+        if self.mode == "brier":
+            target = 1.0 if correct else 0.0
+            return 1.0 - (confidence - target) ** 2
+
+        # mode == "linear" (legacy)
         if correct:
             return confidence
         else:
