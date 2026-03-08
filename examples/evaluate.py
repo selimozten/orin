@@ -4,6 +4,7 @@ Usage:
     python examples/evaluate.py
     python examples/evaluate.py --env orin/FinText-News-v0 --episodes 100
     python examples/evaluate.py --model path/to/model.zip
+    python examples/evaluate.py --detailed
 """
 
 from __future__ import annotations
@@ -32,6 +33,15 @@ def majority_down_agent(obs, deterministic=False):
     return 2, None  # direction=0 (down), confidence bin=2 -> 0.5
 
 
+def _actual_to_label(actual: float) -> int:
+    """Convert actual return to direction label: 0=down, 1=flat, 2=up."""
+    if actual > 0.005:
+        return 2
+    elif actual < -0.005:
+        return 0
+    return 1
+
+
 def run_evaluation(
     env_id: str,
     policy,
@@ -50,6 +60,11 @@ def run_evaluation(
     returns_by_prediction = {"up": [], "down": [], "flat": []}
     direction_labels = {0: "down", 1: "flat", 2: "up"}
 
+    y_true: list[int] = []
+    y_pred: list[int] = []
+    confidences: list[float] = []
+    corrects: list[bool] = []
+
     for ep in range(n_episodes):
         obs, info = env.reset(seed=ep)
         action, _ = policy(obs)
@@ -61,12 +76,14 @@ def run_evaluation(
         conf = info.get("confidence", 0.5)
         pred_label = direction_labels.get(pred_dir, "flat")
 
-        correct = (
-            (pred_dir == 2 and actual > 0.005)
-            or (pred_dir == 0 and actual < -0.005)
-            or (pred_dir == 1 and abs(actual) <= 0.005)
-        )
+        true_dir = _actual_to_label(actual)
+        y_true.append(true_dir)
+        y_pred.append(pred_dir)
+        confidences.append(conf)
 
+        correct = pred_dir == true_dir
+
+        corrects.append(correct)
         if correct:
             directions_correct += 1
             confidence_when_correct.append(conf)
@@ -93,6 +110,10 @@ def run_evaluation(
             float(np.mean(confidence_when_wrong)) if confidence_when_wrong else 0.0
         ),
         "prediction_distribution": {k: len(v) for k, v in returns_by_prediction.items()},
+        "_y_true": y_true,
+        "_y_pred": y_pred,
+        "_confidences": confidences,
+        "_corrects": corrects,
     }
     return metrics
 
@@ -114,6 +135,43 @@ def print_metrics(metrics: dict) -> None:
     print()
 
 
+def print_detailed(metrics: dict) -> None:
+    """Print detailed evaluation: confusion matrix, per-direction metrics, calibration."""
+    from orin.eval.metrics import calibration_curve, confusion_matrix, direction_metrics
+
+    y_true = metrics["_y_true"]
+    y_pred = metrics["_y_pred"]
+    confs = metrics["_confidences"]
+    corr = metrics["_corrects"]
+
+    # Confusion matrix
+    cm = confusion_matrix(y_true, y_pred)
+    labels = ["down", "flat", "  up"]
+    print("  Confusion Matrix (rows=true, cols=predicted):")
+    print(f"           {'down':>6s} {'flat':>6s} {'up':>6s}")
+    for i, lbl in enumerate(labels):
+        print(f"    {lbl:>4s}  {cm[i, 0]:6d} {cm[i, 1]:6d} {cm[i, 2]:6d}")
+    print()
+
+    # Per-direction metrics
+    dm = direction_metrics(y_true, y_pred)
+    print("  Per-direction metrics:")
+    print(f"    {'':8s} {'Prec':>6s} {'Recall':>6s} {'F1':>6s}")
+    for name in ("down", "flat", "up"):
+        d = dm[name]
+        print(f"    {name:8s} {d['precision']:6.3f} {d['recall']:6.3f} {d['f1']:6.3f}")
+    print()
+
+    # Calibration
+    cal = calibration_curve(confs, corr)
+    print(f"  Calibration (ECE={cal['ece']:.4f}):")
+    print(f"    {'Bin':>6s} {'Acc':>6s} {'Count':>6s}")
+    for b, a, c in zip(cal["bins"], cal["accuracy"], cal["counts"]):
+        if c > 0:
+            print(f"    {b:6.2f} {a:6.3f} {c:6d}")
+    print()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate agents on orin")
     parser.add_argument("--env", default="orin/FinText-Earnings-v0")
@@ -121,6 +179,9 @@ def main() -> None:
     parser.add_argument("--obs-size", type=int, default=256)
     parser.add_argument("--model", default=None, help="Path to saved SB3 model (.zip)")
     parser.add_argument("--json", default=None, help="Save results to JSON file")
+    parser.add_argument(
+        "--detailed", action="store_true", help="Print confusion matrix and calibration"
+    )
     args = parser.parse_args()
 
     all_results = []
@@ -135,6 +196,8 @@ def main() -> None:
     for label, policy in baselines:
         metrics = run_evaluation(args.env, policy, args.episodes, args.obs_size, label)
         print_metrics(metrics)
+        if args.detailed:
+            print_detailed(metrics)
         all_results.append(metrics)
 
     # Trained agent (if model provided)
@@ -151,6 +214,8 @@ def main() -> None:
                 f"PPO ({args.model})",
             )
             print_metrics(metrics)
+            if args.detailed:
+                print_detailed(metrics)
             all_results.append(metrics)
         except ImportError:
             print("Install stable-baselines3 to evaluate trained models")
@@ -158,8 +223,12 @@ def main() -> None:
             print(f"Model not found: {args.model}")
 
     if args.json:
+        # Strip internal keys before saving
+        saveable = []
+        for m in all_results:
+            saveable.append({k: v for k, v in m.items() if not k.startswith("_")})
         with open(args.json, "w") as f:
-            json.dump(all_results, f, indent=2)
+            json.dump(saveable, f, indent=2)
         print(f"Results saved to {args.json}")
 
 
