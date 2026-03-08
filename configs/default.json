@@ -1,0 +1,12 @@
+{
+  "env_type": "earnings",
+  "env_id": "orin/FinText-Earnings-v0",
+  "n_records": 300,
+  "difficulty": "easy",
+  "timesteps": 30000,
+  "seed": 42,
+  "model_name": "all-MiniLM-L6-v2",
+  "directional_weight": 0.7,
+  "calibration_weight": 0.3,
+  "calibration_mode": "brier"
+}

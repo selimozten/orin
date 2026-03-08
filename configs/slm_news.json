@@ -1,0 +1,11 @@
+{
+  "env_type": "news",
+  "env_id": "orin/FinText-News-v0",
+  "n_records": 500,
+  "difficulty": "medium",
+  "timesteps": 50000,
+  "net_arch": [256, 128],
+  "learning_rate": 3e-4,
+  "ent_coef": 0.03,
+  "calibration_mode": "brier"
+}
