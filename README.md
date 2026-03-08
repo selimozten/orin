@@ -2,8 +2,6 @@
 
 RL gym for training LLMs on financial text reasoning.
 
-*"This is the infrastructure to answer it, not the answer itself."*
-
 ## Quick Start
 
 ```python
@@ -95,6 +93,10 @@ Expected format per line:
 ```json
 {"text": "...", "ticker": "AAPL", "date": "2024-01-01", "outcome": {"direction": "up", "magnitude": 0.03, "timeframe": "1d"}}
 ```
+
+## Philosophy
+
+Can machines learn to read financial text and predict what happens next? This is the infrastructure to answer it, not the answer itself.
 
 ## License
 
