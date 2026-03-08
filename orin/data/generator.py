@@ -169,6 +169,102 @@ _EARNINGS_MISS_TEMPLATES = [
     ),
 ]
 
+_EARNINGS_AMBIGUOUS_TEMPLATES = [
+    (
+        "{ticker} {quarter} earnings call. Revenue beat expectations at ${revenue}B, "
+        "up {rev_growth}% YoY, but management lowered full-year guidance citing "
+        "{headwind}. {segment} was a bright spot with {seg_growth}% growth, "
+        "though operating margin contracted {margin_bps} basis points to {margin}%. "
+        "{mixed_comment}"
+    ),
+    (
+        "{ticker} reported mixed {quarter} results. EPS of ${eps} beat estimates by "
+        "${eps_beat}, but revenue of ${revenue}B missed consensus by ${miss_amount}M. "
+        "{segment} {seg_direction} {seg_change}%. Management sounded cautiously "
+        "optimistic despite the mixed numbers. {mixed_comment}"
+    ),
+    (
+        "{ticker} {quarter} results were a tale of two stories. Revenue missed at "
+        "${revenue}B, but management sounded optimistic about next quarter, citing "
+        "a strong pipeline and improving demand. {segment} grew {seg_growth}% while "
+        "other segments declined. {mixed_comment}"
+    ),
+    (
+        "Welcome to {ticker} {quarter} earnings conference call. Beat on EPS "
+        "with ${eps} vs ${eps_expected} expected, but revenue of ${revenue}B "
+        "came in light. Guidance maintained rather than raised despite the beat. "
+        "{mixed_comment} Analysts remain divided on the outlook."
+    ),
+    (
+        "{ticker} {quarter} earnings showed divergence. Top-line revenue of "
+        "${revenue}B grew {rev_growth}% but margins compressed {margin_bps} basis "
+        "points to {margin}%. Management raised revenue guidance but lowered "
+        "profit outlook. {mixed_comment}"
+    ),
+    (
+        "{ticker} delivered a complicated {quarter}. Revenue surpassed estimates "
+        "at ${revenue}B, yet free cash flow turned negative at -${fcf}B due to "
+        "heavy investments. {segment} accelerated but {headwind} weighed on "
+        "profitability. {mixed_comment}"
+    ),
+]
+
+_NEWS_AMBIGUOUS_TEMPLATES = [
+    (
+        "{catalyst_positive}, but {catalyst_negative_clause}. {index} fluctuates "
+        "{move}% as traders weigh conflicting signals. {sector} stocks are mixed. "
+        "{follow_up}"
+    ),
+    (
+        "Markets digest mixed signals: {catalyst_positive}, while separately "
+        "{catalyst_negative_clause}. {index} moves {move}% on volatile trading. "
+        "{sector} sector sees rotation. {follow_up}"
+    ),
+    (
+        "Breaking: {catalyst_positive}. However, {catalyst_negative_clause}. "
+        "{index} seesaws {move}% as bulls and bears clash. {follow_up}"
+    ),
+]
+
+_FILINGS_AMBIGUOUS_TEMPLATES = [
+    (
+        "FORM {form} REPORT - {ticker}. Revenue increased {rev_growth}% to "
+        "${revenue}B, but operating margin contracted to {margin}%. Long-term "
+        "debt rose while free cash flow improved {fcf_growth}%. "
+        "{mixed_comment}"
+    ),
+    (
+        "FORM 8-K CURRENT REPORT - {ticker}. The Company announced a "
+        "${buyback}B share buyback program alongside a workforce reduction "
+        "of {layoff_pct}%. Management cited the need to balance growth "
+        "investments with operational efficiency. {mixed_comment}"
+    ),
+]
+
+_MACRO_AMBIGUOUS_TEMPLATES = [
+    (
+        "{indicator_pos} {positive_verb} to {value_pos}, beating estimates, "
+        "but {indicator_neg} {negative_verb} to {value_neg}, missing forecasts. "
+        "Mixed signals leave markets uncertain. {follow_up}"
+    ),
+    (
+        "Economic data sends conflicting signals. {indicator_pos} shows "
+        "improvement at {value_pos}, while {indicator_neg} disappoints at "
+        "{value_neg}. Federal Reserve likely to remain data dependent. {follow_up}"
+    ),
+]
+
+_MIXED_COMMENTS = [
+    "The picture remains nuanced with both positives and negatives.",
+    "Analysts are split on whether this is net positive or negative.",
+    "The market reaction will depend on which signal investors prioritize.",
+    "Execution was uneven across the business.",
+    "Results leave room for both bullish and bearish interpretations.",
+    "Strong top line offset by margin headwinds.",
+    "Management struck a balanced tone on the outlook.",
+    "The mix of signals makes the forward path unclear.",
+]
+
 _POSITIVE_COMMENTS = [
     "Customer demand remains exceptionally strong.",
     "AI-driven growth is accelerating across the business.",
@@ -263,6 +359,17 @@ _NEGATIVE_CATALYSTS = [
     "Yield curve inversion deepens signaling recession risk",
 ]
 
+_NEGATIVE_CATALYST_CLAUSES = [
+    "inflation data surprised to the upside",
+    "trade tensions escalated with new tariff threats",
+    "consumer confidence weakened",
+    "earnings season revealed margin compression",
+    "credit conditions tightened unexpectedly",
+    "geopolitical tensions flared up",
+    "oil prices spiked on supply fears",
+    "housing data disappointed sharply",
+]
+
 _QUARTERS = [
     "Q1 2023",
     "Q2 2023",
@@ -343,22 +450,68 @@ _HEADWINDS = [
     "inventory destocking",
 ]
 
+# -- Difficulty presets --
 
-def _rand_revenue(ticker: str) -> float:
+_DIFFICULTY_SETTINGS: dict[str, dict[str, float]] = {
+    "easy": {"ambiguous_rate": 0.0, "noise_rate": 0.10},
+    "medium": {"ambiguous_rate": 0.25, "noise_rate": 0.15},
+    "hard": {"ambiguous_rate": 0.40, "noise_rate": 0.20},
+}
+
+
+def _resolve_difficulty(
+    difficulty: str,
+    noise_rate: float | None,
+) -> tuple[float, float]:
+    """Return (ambiguous_rate, noise_rate) based on difficulty and optional override."""
+    if difficulty not in _DIFFICULTY_SETTINGS:
+        valid = list(_DIFFICULTY_SETTINGS)
+        raise ValueError(f"difficulty must be one of {valid}, got {difficulty!r}")
+    settings = _DIFFICULTY_SETTINGS[difficulty]
+    ambiguous = settings["ambiguous_rate"]
+    noise = noise_rate if noise_rate is not None else settings["noise_rate"]
+    return ambiguous, noise
+
+
+def _market_context(rng: random.Random, direction: str) -> dict[str, float]:
+    """Generate synthetic market context features correlated with outcome direction."""
+    if direction == "up":
+        vix = round(rng.uniform(12.0, 22.0), 2)
+        sector_perf = round(rng.uniform(0.0, 0.05), 4)
+        market_perf = round(rng.uniform(-0.01, 0.03), 4)
+    elif direction == "down":
+        vix = round(rng.uniform(22.0, 35.0), 2)
+        sector_perf = round(rng.uniform(-0.05, 0.0), 4)
+        market_perf = round(rng.uniform(-0.03, 0.01), 4)
+    else:
+        vix = round(rng.uniform(15.0, 25.0), 2)
+        sector_perf = round(rng.uniform(-0.02, 0.02), 4)
+        market_perf = round(rng.uniform(-0.015, 0.015), 4)
+    return {
+        "vix": vix,
+        "sector_perf_5d": sector_perf,
+        "market_perf_1d": market_perf,
+    }
+
+
+def _rand_revenue(ticker: str, rng: random.Random | None = None) -> float:
     """Generate plausible revenue based on ticker."""
+    _rng = rng or random
     large = {"AAPL", "AMZN", "GOOGL", "MSFT", "WMT", "UNH"}
     mid = {"META", "NVDA", "JPM", "BAC", "COST", "HD", "JNJ", "PFE"}
     if ticker in large:
-        return round(random.uniform(50, 170), 1)
+        return round(_rng.uniform(50, 170), 1)
     elif ticker in mid:
-        return round(random.uniform(10, 50), 1)
+        return round(_rng.uniform(10, 50), 1)
     else:
-        return round(random.uniform(1, 15), 1)
+        return round(_rng.uniform(1, 15), 1)
 
 
 def generate_earnings(
     n: int = 200,
     seed: int = 42,
+    difficulty: str = "easy",
+    noise_rate: float | None = None,
 ) -> list[dict[str, Any]]:
     """Generate n synthetic earnings call records.
 
@@ -368,10 +521,15 @@ def generate_earnings(
     Args:
         n: Number of records to generate.
         seed: Random seed for reproducibility.
+        difficulty: One of "easy", "medium", "hard". Controls ambiguous
+            template rate and default noise rate.
+        noise_rate: Override for the noise rate. If None, uses the
+            difficulty default.
 
     Returns:
         List of orin-format records.
     """
+    ambiguous_rate, effective_noise = _resolve_difficulty(difficulty, noise_rate)
     rng = random.Random(seed)
     records = []
 
@@ -379,18 +537,45 @@ def generate_earnings(
         ticker = rng.choice(ALL_TICKERS)
         date = rng.choice(_ALL_DATES)
         quarter = rng.choice(_QUARTERS)
-        revenue = _rand_revenue(ticker)
+        revenue = _rand_revenue(ticker, rng)
         segment = rng.choice(_SEGMENTS)
 
-        is_beat = rng.random() < 0.55
+        # Check if this record should use an ambiguous template
+        if rng.random() < ambiguous_rate:
+            template = rng.choice(_EARNINGS_AMBIGUOUS_TEMPLATES)
+            rev_growth = rng.randint(3, 30)
+            margin = round(rng.uniform(15, 45), 1)
+            magnitude = round(rng.uniform(0.005, 0.08), 3)
+            # 50/50 direction for ambiguous records
+            direction = "up" if rng.random() < 0.50 else "down"
 
-        if is_beat:
+            text = template.format(
+                ticker=ticker,
+                quarter=quarter,
+                revenue=revenue,
+                rev_growth=rev_growth,
+                segment=segment,
+                seg_growth=rng.randint(5, 40),
+                seg_direction=rng.choice(["declined", "fell", "dropped"]),
+                seg_change=rng.randint(3, 20),
+                margin_bps=rng.randint(30, 200),
+                margin=margin,
+                mixed_comment=rng.choice(_MIXED_COMMENTS),
+                headwind=rng.choice(_HEADWINDS),
+                eps=round(rng.uniform(1.0, 6.0), 2),
+                eps_beat=round(rng.uniform(0.05, 0.30), 2),
+                eps_expected=round(rng.uniform(1.0, 5.5), 2),
+                miss_amount=rng.randint(20, 400),
+                fcf=round(revenue * rng.uniform(0.02, 0.15), 1),
+            )
+        elif rng.random() < 0.55:
+            # Beat path (original logic, ~55% of non-ambiguous records)
             template = rng.choice(_EARNINGS_BEAT_TEMPLATES)
             rev_growth = rng.randint(5, 45)
             margin = round(rng.uniform(20, 55), 1)
             magnitude = round(rng.uniform(0.01, 0.15), 3)
-            # Add some noise: 10% chance a "beat" actually goes down
-            if rng.random() < 0.10:
+            # Noise: chance a "beat" actually goes down
+            if rng.random() < effective_noise:
                 direction = "down"
                 magnitude = round(rng.uniform(0.005, 0.03), 3)
             else:
@@ -420,12 +605,13 @@ def generate_earnings(
                 ni_growth=rng.randint(8, 40),
             )
         else:
+            # Miss path
             template = rng.choice(_EARNINGS_MISS_TEMPLATES)
             rev_growth = rng.randint(1, 20)
             margin = round(rng.uniform(12, 35), 1)
             magnitude = round(rng.uniform(0.01, 0.20), 3)
-            # 10% chance a "miss" actually goes up (sell-the-rumor)
-            if rng.random() < 0.10:
+            # Noise: chance a "miss" actually goes up
+            if rng.random() < effective_noise:
                 direction = "up"
                 magnitude = round(rng.uniform(0.005, 0.03), 3)
             else:
@@ -470,6 +656,7 @@ def generate_earnings(
                     "magnitude": magnitude,
                     "timeframe": "1d",
                 },
+                "market_context": _market_context(rng, direction),
             }
         )
 
@@ -479,23 +666,56 @@ def generate_earnings(
 def generate_news(
     n: int = 150,
     seed: int = 42,
+    difficulty: str = "easy",
+    noise_rate: float | None = None,
 ) -> list[dict[str, Any]]:
-    """Generate n synthetic financial news records."""
+    """Generate n synthetic financial news records.
+
+    Args:
+        n: Number of records to generate.
+        seed: Random seed for reproducibility.
+        difficulty: One of "easy", "medium", "hard".
+        noise_rate: Override for the noise rate. If None, uses the
+            difficulty default.
+    """
+    ambiguous_rate, effective_noise = _resolve_difficulty(difficulty, noise_rate)
     rng = random.Random(seed)
     records = []
 
     for i in range(n):
-        is_positive = rng.random() < 0.50
         date = rng.choice(_ALL_DATES)
         sector = rng.choice(_SECTORS)
         index = rng.choice(_INDICES)
 
-        if is_positive:
+        # Check if this record should use an ambiguous template
+        if rng.random() < ambiguous_rate:
+            template = rng.choice(_NEWS_AMBIGUOUS_TEMPLATES)
+            move = round(rng.uniform(0.2, 2.0), 1)
+            magnitude = round(rng.uniform(0.003, 0.03), 3)
+            direction = "up" if rng.random() < 0.50 else "down"
+            ticker = rng.choice(["SPY", "QQQ", "IWM", "DIA"])
+            text = template.format(
+                catalyst_positive=rng.choice(_POSITIVE_CATALYSTS),
+                catalyst_negative_clause=rng.choice(_NEGATIVE_CATALYST_CLAUSES),
+                index=index,
+                move=move,
+                sector=sector,
+                follow_up=rng.choice(
+                    [
+                        "Traders await further clarity.",
+                        "Options activity shows heightened uncertainty.",
+                        "Volume is elevated on both sides.",
+                        "Market breadth is flat.",
+                    ]
+                ),
+            )
+        elif rng.random() < 0.50:
+            # Positive path
             template = rng.choice(_NEWS_POSITIVE_TEMPLATES)
             catalyst = rng.choice(_POSITIVE_CATALYSTS)
             move = round(rng.uniform(0.3, 3.0), 1)
             magnitude = round(rng.uniform(0.005, 0.04), 3)
-            direction = "down" if rng.random() < 0.08 else "up"
+            direction = "down" if rng.random() < effective_noise else "up"
             ticker = rng.choice(["SPY", "QQQ", "IWM", "DIA"])
             text = template.format(
                 catalyst=catalyst,
@@ -515,11 +735,12 @@ def generate_news(
                 ),
             )
         else:
+            # Negative path
             template = rng.choice(_NEWS_NEGATIVE_TEMPLATES)
             catalyst = rng.choice(_NEGATIVE_CATALYSTS)
             move = round(rng.uniform(0.3, 4.0), 1)
             magnitude = round(rng.uniform(0.005, 0.06), 3)
-            direction = "up" if rng.random() < 0.08 else "down"
+            direction = "up" if rng.random() < effective_noise else "down"
             ticker = rng.choice(["SPY", "QQQ", "IWM", "DIA"])
             text = template.format(
                 catalyst=catalyst,
@@ -554,6 +775,7 @@ def generate_news(
                     "magnitude": magnitude,
                     "timeframe": "1d",
                 },
+                "market_context": _market_context(rng, direction),
             }
         )
 
@@ -563,8 +785,19 @@ def generate_news(
 def generate_filings(
     n: int = 100,
     seed: int = 42,
+    difficulty: str = "easy",
+    noise_rate: float | None = None,
 ) -> list[dict[str, Any]]:
-    """Generate n synthetic SEC filing records."""
+    """Generate n synthetic SEC filing records.
+
+    Args:
+        n: Number of records to generate.
+        seed: Random seed for reproducibility.
+        difficulty: One of "easy", "medium", "hard".
+        noise_rate: Override for the noise rate. If None, uses the
+            difficulty default.
+    """
+    ambiguous_rate, effective_noise = _resolve_difficulty(difficulty, noise_rate)
     rng = random.Random(seed)
     records = []
     form_types = ["10-K", "10-Q", "8-K"]
@@ -589,10 +822,29 @@ def generate_filings(
         ticker = rng.choice(ALL_TICKERS)
         date = rng.choice(_ALL_DATES)
         form = rng.choice(form_types)
-        revenue = _rand_revenue(ticker)
+        revenue = _rand_revenue(ticker, rng)
         is_positive = rng.random() < 0.52
 
-        if form == "8-K":
+        # Check if this record should use an ambiguous template
+        if rng.random() < ambiguous_rate:
+            template = rng.choice(_FILINGS_AMBIGUOUS_TEMPLATES)
+            rev_growth = rng.randint(3, 25)
+            margin = round(rng.uniform(12, 40), 1)
+            magnitude = round(rng.uniform(0.005, 0.05), 3)
+            direction = "up" if rng.random() < 0.50 else "down"
+
+            text = template.format(
+                form=rng.choice(["10-K", "10-Q"]),
+                ticker=ticker,
+                revenue=revenue,
+                rev_growth=rev_growth,
+                margin=margin,
+                fcf_growth=rng.randint(5, 30),
+                mixed_comment=rng.choice(_MIXED_COMMENTS),
+                buyback=rng.randint(2, 20),
+                layoff_pct=rng.randint(5, 15),
+            )
+        elif form == "8-K":
             if is_positive:
                 event = rng.choice(_positive_8k).format(
                     amount=rng.randint(2, 30),
@@ -626,7 +878,8 @@ def generate_filings(
                     f"FORM {form} {'ANNUAL' if form == '10-K' else 'QUARTERLY'} "
                     f"REPORT - {ticker}. Revenue {'increased' if rev_growth > 0 else 'was'} "
                     f"{rev_growth}% to ${revenue}B. Operating margin was {margin}%. "
-                    f"Cash and equivalents totaled ${round(revenue * rng.uniform(0.1, 0.4), 1)}B. "
+                    f"Cash and equivalents totaled "
+                    f"${round(revenue * rng.uniform(0.1, 0.4), 1)}B. "
                     f"Free cash flow improved {rng.randint(10, 40)}%. "
                     f"{rng.choice(_POSITIVE_COMMENTS)}"
                 )
@@ -648,8 +901,8 @@ def generate_filings(
                 direction = "down"
                 magnitude = round(rng.uniform(0.005, 0.07), 3)
 
-        # Noise: 8% chance direction flips
-        if rng.random() < 0.08:
+        # Noise: chance direction flips
+        if rng.random() < effective_noise:
             direction = "up" if direction == "down" else "down"
             magnitude = round(rng.uniform(0.005, 0.02), 3)
 
@@ -664,6 +917,7 @@ def generate_filings(
                     "magnitude": magnitude,
                     "timeframe": "5d",
                 },
+                "market_context": _market_context(rng, direction),
             }
         )
 
@@ -673,8 +927,19 @@ def generate_filings(
 def generate_macro(
     n: int = 100,
     seed: int = 42,
+    difficulty: str = "easy",
+    noise_rate: float | None = None,
 ) -> list[dict[str, Any]]:
-    """Generate n synthetic macroeconomic data records."""
+    """Generate n synthetic macroeconomic data records.
+
+    Args:
+        n: Number of records to generate.
+        seed: Random seed for reproducibility.
+        difficulty: One of "easy", "medium", "hard".
+        noise_rate: Override for the noise rate. If None, uses the
+            difficulty default.
+    """
+    ambiguous_rate, effective_noise = _resolve_difficulty(difficulty, noise_rate)
     rng = random.Random(seed)
     records = []
 
@@ -739,15 +1004,40 @@ def generate_macro(
     ]
 
     for i in range(n):
-        is_positive = rng.random() < 0.50
         date = rng.choice(_ALL_DATES)
         indicator = rng.choice(_indicators)
         month = rng.choice(_months)
 
-        if is_positive:
+        # Check if this record should use an ambiguous template
+        if rng.random() < ambiguous_rate:
+            template = rng.choice(_MACRO_AMBIGUOUS_TEMPLATES)
+            magnitude = round(rng.uniform(0.003, 0.025), 3)
+            direction = "up" if rng.random() < 0.50 else "down"
+            indicator_pos = rng.choice(_indicators)
+            indicator_neg = rng.choice(
+                [ind for ind in _indicators if ind != indicator_pos]
+            )
+            text = template.format(
+                indicator_pos=indicator_pos,
+                positive_verb=rng.choice(["rises", "increases", "improves"]),
+                value_pos=f"{rng.uniform(2.0, 5.0):.1f}%",
+                indicator_neg=indicator_neg,
+                negative_verb=rng.choice(["falls", "declines", "drops"]),
+                value_neg=f"{rng.uniform(0.5, 3.5):.1f}%",
+                follow_up=rng.choice(
+                    [
+                        "Traders await further data for clarity.",
+                        "Bond market shows muted reaction.",
+                        "Equity markets trade sideways.",
+                        "Analysts debate the implications.",
+                    ]
+                ),
+            )
+        elif rng.random() < 0.50:
+            # Positive path
             template = rng.choice(_positive_macro_templates)
             magnitude = round(rng.uniform(0.003, 0.03), 3)
-            direction = "down" if rng.random() < 0.10 else "up"
+            direction = "down" if rng.random() < effective_noise else "up"
             text = template.format(
                 indicator=indicator,
                 positive_verb=rng.choice(["rises", "increases", "improves", "surges"]),
@@ -787,9 +1077,10 @@ def generate_macro(
                 month=month,
             )
         else:
+            # Negative path
             template = rng.choice(_negative_macro_templates)
             magnitude = round(rng.uniform(0.005, 0.04), 3)
-            direction = "up" if rng.random() < 0.10 else "down"
+            direction = "up" if rng.random() < effective_noise else "down"
             text = template.format(
                 indicator=indicator,
                 negative_verb=rng.choice(["falls", "declines", "drops", "plunges"]),
@@ -840,6 +1131,7 @@ def generate_macro(
                     "magnitude": magnitude,
                     "timeframe": rng.choice(["1d", "5d"]),
                 },
+                "market_context": _market_context(rng, direction),
             }
         )
 
@@ -852,15 +1144,26 @@ def generate_all(
     n_filings: int = 100,
     n_macro: int = 100,
     seed: int = 42,
+    difficulty: str = "easy",
+    noise_rate: float | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     """Generate all dataset types.
+
+    Args:
+        n_earnings: Number of earnings records.
+        n_news: Number of news records.
+        n_filings: Number of filing records.
+        n_macro: Number of macro records.
+        seed: Random seed for reproducibility.
+        difficulty: One of "easy", "medium", "hard".
+        noise_rate: Override for the noise rate.
 
     Returns:
         Dict mapping env type to list of records.
     """
     return {
-        "earnings": generate_earnings(n_earnings, seed),
-        "news": generate_news(n_news, seed + 1),
-        "filing": generate_filings(n_filings, seed + 2),
-        "macro": generate_macro(n_macro, seed + 3),
+        "earnings": generate_earnings(n_earnings, seed, difficulty, noise_rate),
+        "news": generate_news(n_news, seed + 1, difficulty, noise_rate),
+        "filing": generate_filings(n_filings, seed + 2, difficulty, noise_rate),
+        "macro": generate_macro(n_macro, seed + 3, difficulty, noise_rate),
     }
