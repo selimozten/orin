@@ -102,3 +102,80 @@ def test_render(capsys):
     captured = capsys.readouterr()
     assert len(captured.out) > 0
     env.close()
+
+
+# -- Multi-step episode tests (Phase 5.2) --
+
+def _make_multi_step_data(n: int = 10) -> list[dict]:
+    """Create simple test data for multi-step episode tests."""
+    return [
+        {
+            "text": f"Record {i} text content.",
+            "ticker": "TEST",
+            "date": f"2024-01-{i + 1:02d}",
+            "source": "test",
+            "outcome": {"direction": "up", "magnitude": 0.05, "timeframe": "1d"},
+        }
+        for i in range(n)
+    ]
+
+
+def test_multi_step_not_terminated_early():
+    """With episode_length=3, steps 1 and 2 should have terminated=False."""
+    data = _make_multi_step_data(10)
+    env = gym.make("orin/FinText-Earnings-v0", data=data, episode_length=3)
+    env.reset(seed=0)
+    action = {"direction": 2, "confidence": np.float32(0.5)}
+
+    _, _, terminated1, _, _ = env.step(action)
+    assert terminated1 is False
+
+    _, _, terminated2, _, _ = env.step(action)
+    assert terminated2 is False
+
+    env.close()
+
+
+def test_multi_step_terminated_at_length():
+    """With episode_length=3, step 3 should have terminated=True."""
+    data = _make_multi_step_data(10)
+    env = gym.make("orin/FinText-Earnings-v0", data=data, episode_length=3)
+    env.reset(seed=0)
+    action = {"direction": 2, "confidence": np.float32(0.5)}
+
+    env.step(action)
+    env.step(action)
+    _, _, terminated3, _, _ = env.step(action)
+    assert terminated3 is True
+
+    env.close()
+
+
+def test_single_step_backward_compat():
+    """Default episode_length=1 still terminates after one step."""
+    data = _make_multi_step_data(10)
+    env = gym.make("orin/FinText-Earnings-v0", data=data)
+    env.reset(seed=0)
+    action = {"direction": 2, "confidence": np.float32(0.5)}
+
+    _, _, terminated, _, _ = env.step(action)
+    assert terminated is True
+
+    env.close()
+
+
+ENV_V1_IDS = [
+    "orin/FinText-Earnings-v1",
+    "orin/FinText-News-v1",
+    "orin/FinText-Filing-v1",
+    "orin/FinText-Macro-v1",
+]
+
+
+@pytest.mark.parametrize("env_id", ENV_V1_IDS)
+def test_v1_env_registration(env_id: str):
+    """v1 environments can be created and have episode_length=5."""
+    env = gym.make(env_id)
+    assert env is not None
+    assert env.unwrapped.episode_length == 5
+    env.close()
