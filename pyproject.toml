@@ -35,6 +35,9 @@ dev = [
     "ruff>=0.1.0",
 ]
 
+[project.scripts]
+orin = "orin.cli:main"
+
 [project.entry-points."gymnasium.envs.__root__"]
 orin = "orin.envs:register_envs"
 
