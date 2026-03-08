@@ -36,6 +36,9 @@ class FinTextEnv(gym.Env):
         max_text_length: int = 4096,
         render_mode: str | None = None,
         shuffle: bool = True,
+        episode_length: int = 1,
+        temporal_sort: bool = False,
+        market_context: bool = False,
     ) -> None:
         super().__init__()
 
@@ -44,6 +47,9 @@ class FinTextEnv(gym.Env):
         self.max_text_length = max_text_length
         self.render_mode = render_mode
         self.shuffle = shuffle
+        self.episode_length = episode_length
+        self.temporal_sort = temporal_sort
+        self.market_context = market_context
 
         self.observation_space = spaces.Dict(
             {
@@ -84,6 +90,10 @@ class FinTextEnv(gym.Env):
         """Override in subclasses to load environment-specific data."""
         return self.data
 
+    def _sort_indices_by_date(self, indices: list[int]) -> list[int]:
+        """Sort indices by the date field in the corresponding records."""
+        return sorted(indices, key=lambda i: self.data[i].get("date", ""))
+
     def reset(
         self,
         *,
@@ -102,7 +112,9 @@ class FinTextEnv(gym.Env):
 
         if not self._indices or self._current_idx >= len(self._indices):
             self._indices = list(range(len(self.data)))
-            if self.shuffle:
+            if self.temporal_sort:
+                self._indices = self._sort_indices_by_date(self._indices)
+            elif self.shuffle:
                 self.np_random.shuffle(self._indices)
             self._current_idx = 0
 
@@ -131,10 +143,12 @@ class FinTextEnv(gym.Env):
 
         self._step_count += 1
         self._current_idx += 1
-        self._episode_count += 1
         self._cumulative_reward += reward
-        terminated = True  # one prediction per document
+        terminated = self._step_count >= self.episode_length
         truncated = False
+
+        if terminated:
+            self._episode_count += 1
 
         info = self._make_info(self._current_record)
         info["actual_return"] = actual_return
@@ -146,8 +160,14 @@ class FinTextEnv(gym.Env):
         if self.render_mode == "human":
             self.render()
 
-        # Prepare next observation (for vectorized envs that auto-reset)
-        obs = self._make_obs(self._current_record)
+        # When not terminated, advance to the next record for the next observation
+        if not terminated and self._current_idx < len(self._indices):
+            next_idx = self._indices[self._current_idx]
+            self._current_record = self.data[next_idx]
+            obs = self._make_obs(self._current_record)
+        else:
+            # Terminated or no more records; return current obs (will be reset anyway)
+            obs = self._make_obs(self._current_record)
 
         return obs, reward, terminated, truncated, info
 
@@ -171,7 +191,7 @@ class FinTextEnv(gym.Env):
 
     def _make_obs(self, record: dict[str, Any]) -> dict[str, Any]:
         text = record.get("text", "")[: self.max_text_length]
-        return {
+        obs: dict[str, Any] = {
             "text": text,
             "metadata": {
                 "ticker": record.get("ticker", ""),
@@ -179,6 +199,9 @@ class FinTextEnv(gym.Env):
                 "source": record.get("source", ""),
             },
         }
+        if self.market_context and "market_context" in record:
+            obs["metadata"]["market_context"] = record["market_context"]
+        return obs
 
     def _make_info(self, record: dict[str, Any]) -> dict[str, Any]:
         return {
