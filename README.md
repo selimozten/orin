@@ -2,6 +2,8 @@
 
 RL gym for training LLMs on financial text reasoning.
 
+*"This is the infrastructure to answer it, not the answer itself."*
+
 ## Quick Start
 
 ```python
