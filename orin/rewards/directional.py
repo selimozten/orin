@@ -17,6 +17,7 @@ class DirectionalReward:
 
     scale_by_magnitude: bool = True
     flat_threshold: float = 0.005
+    partial_credit: bool = False
 
     def compute(
         self,
@@ -48,7 +49,10 @@ class DirectionalReward:
                 if self.scale_by_magnitude:
                     reward *= 1.0 + abs(actual_return)
             else:
-                reward = -1.0
+                if self.partial_credit and abs(actual_return) < 2 * self.flat_threshold:
+                    reward = -0.3
+                else:
+                    reward = -1.0
                 if self.scale_by_magnitude:
                     reward *= 1.0 + abs(actual_return)
 
