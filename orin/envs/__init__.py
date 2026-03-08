@@ -22,3 +22,30 @@ def register_envs() -> None:
     }
     for env_id, entry_point in _envs.items():
         gym.register(id=env_id, entry_point=entry_point, disable_env_checker=True)
+
+    # v1 variants with multi-step episodes
+    _envs_v1 = {
+        "orin/FinText-Earnings-v1": (
+            "orin.envs.earnings:FinTextEarnings",
+            {"episode_length": 5},
+        ),
+        "orin/FinText-News-v1": (
+            "orin.envs.news:FinTextNews",
+            {"episode_length": 5},
+        ),
+        "orin/FinText-Filing-v1": (
+            "orin.envs.filing:FinTextFiling",
+            {"episode_length": 5},
+        ),
+        "orin/FinText-Macro-v1": (
+            "orin.envs.macro:FinTextMacro",
+            {"episode_length": 5},
+        ),
+    }
+    for env_id, (entry_point, kwargs) in _envs_v1.items():
+        gym.register(
+            id=env_id,
+            entry_point=entry_point,
+            kwargs=kwargs,
+            disable_env_checker=True,
+        )
