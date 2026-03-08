@@ -23,8 +23,19 @@ import numpy as np
 from stable_baselines3 import PPO
 
 import orin  # noqa: F401
+from orin.callbacks import OrinCallback
 from orin.data.generator import generate_earnings, generate_news
+from orin.eval.metrics import calibration_curve, confusion_matrix, direction_metrics
 from orin.wrappers.slm import make_slm_env
+
+
+def _actual_to_label(actual: float) -> int:
+    """Convert actual return to direction label: 0=down, 1=flat, 2=up."""
+    if actual > 0.005:
+        return 2
+    elif actual < -0.005:
+        return 0
+    return 1
 
 
 def evaluate_policy(env, predict_fn, n_episodes: int = 200) -> dict:
@@ -34,6 +45,10 @@ def evaluate_policy(env, predict_fn, n_episodes: int = 200) -> dict:
     pred_counts = {0: 0, 1: 0, 2: 0}
     confidences_correct = []
     confidences_wrong = []
+    y_true: list[int] = []
+    y_pred: list[int] = []
+    confidences: list[float] = []
+    corrects: list[bool] = []
 
     for ep in range(n_episodes):
         obs, info = env.reset(seed=ep + 50000)
@@ -47,11 +62,13 @@ def evaluate_policy(env, predict_fn, n_episodes: int = 200) -> dict:
         conf = info.get("confidence", 0.5)
         pred_counts[pred_dir] = pred_counts.get(pred_dir, 0) + 1
 
-        is_correct = (
-            (pred_dir == 2 and actual > 0.005)
-            or (pred_dir == 0 and actual < -0.005)
-            or (pred_dir == 1 and abs(actual) <= 0.005)
-        )
+        true_dir = _actual_to_label(actual)
+        y_true.append(true_dir)
+        y_pred.append(pred_dir)
+        confidences.append(conf)
+
+        is_correct = pred_dir == true_dir
+        corrects.append(is_correct)
         if is_correct:
             correct += 1
             confidences_correct.append(conf)
@@ -70,6 +87,10 @@ def evaluate_policy(env, predict_fn, n_episodes: int = 200) -> dict:
             "flat": pred_counts.get(1, 0),
             "up": pred_counts.get(2, 0),
         },
+        "_y_true": y_true,
+        "_y_pred": y_pred,
+        "_confidences": confidences,
+        "_corrects": corrects,
     }
 
 
@@ -140,8 +161,9 @@ def main():
         policy_kwargs={"net_arch": [256, 128]},
     )
 
+    callback = OrinCallback(log_interval=1000, verbose=1)
     t0 = time.time()
-    model.learn(total_timesteps=args.timesteps)
+    model.learn(total_timesteps=args.timesteps, callback=callback)
     train_time = time.time() - t0
     print(f"Training time: {train_time:.1f}s")
 
@@ -174,6 +196,32 @@ def main():
         f"wrong={trained['avg_conf_wrong']:.2f}"
     )
 
+    # Confusion matrix
+    y_true = trained["_y_true"]
+    y_pred = trained["_y_pred"]
+    cm = confusion_matrix(y_true, y_pred)
+    labels = ["down", "flat", "  up"]
+    print("\n  Confusion Matrix (rows=true, cols=predicted):")
+    print(f"           {'down':>6s} {'flat':>6s} {'up':>6s}")
+    for i, lbl in enumerate(labels):
+        print(f"    {lbl:>4s}  {cm[i, 0]:6d} {cm[i, 1]:6d} {cm[i, 2]:6d}")
+
+    # Per-direction metrics
+    dm = direction_metrics(y_true, y_pred)
+    print("\n  Per-direction metrics:")
+    print(f"    {'':8s} {'Prec':>6s} {'Recall':>6s} {'F1':>6s}")
+    for name in ("down", "flat", "up"):
+        d = dm[name]
+        print(f"    {name:8s} {d['precision']:6.3f} {d['recall']:6.3f} {d['f1']:6.3f}")
+
+    # Calibration
+    cal = calibration_curve(trained["_confidences"], trained["_corrects"])
+    print(f"\n  Calibration (ECE={cal['ece']:.4f}):")
+    print(f"    {'Bin':>6s} {'Acc':>6s} {'Count':>6s}")
+    for b, a, c in zip(cal["bins"], cal["accuracy"], cal["counts"]):
+        if c > 0:
+            print(f"    {b:6.2f} {a:6.3f} {c:6d}")
+
     # 5. Summary
     delta = trained["mean_reward"] - all_results["random"]["mean_reward"]
     print(f"\nSLM PPO vs Random: {delta:+.3f} reward delta")
@@ -187,8 +235,14 @@ def main():
     else:
         print("Agent did not beat baselines -- needs more data or timesteps.")
 
-    # Save results
-    all_results["config"] = {
+    # Save results (strip internal keys)
+    saveable = {}
+    for key, val in all_results.items():
+        if isinstance(val, dict):
+            saveable[key] = {k: v for k, v in val.items() if not k.startswith("_")}
+        else:
+            saveable[key] = val
+    saveable["config"] = {
         "env_type": args.env_type,
         "n_records": args.n_records,
         "timesteps": args.timesteps,
@@ -199,7 +253,7 @@ def main():
     }
     results_path = results_dir / f"slm_{args.env_type}.json"
     with open(results_path, "w") as f:
-        json.dump(all_results, f, indent=2)
+        json.dump(saveable, f, indent=2)
     print(f"Results saved to {results_path}")
 
     train_env.close()
